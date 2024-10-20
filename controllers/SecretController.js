@@ -1,5 +1,7 @@
 const Secret = require('../models/secret');
-const { decryptData } = require('../utils/crypt');
+const { decryptData, encryptData } = require('../utils/crypt');
+
+const MAX_VERSIONS = 10;
 
 exports.keepSecret = async (req, res) => {
     const { secretName, encryptedData } = req.body;
@@ -8,8 +10,7 @@ exports.keepSecret = async (req, res) => {
     
 
     try {
-        console.log(encryptedData);
-        const decryptedData = decryptData(encryptedData);
+        
 
         const data = await Secret.findOne({secretName});
 
@@ -17,12 +18,17 @@ exports.keepSecret = async (req, res) => {
             return res.status(401).json({error: "Secret already exixts"});
         }
 
-        const secret = new Secret({
+        const decryptedData = decryptData(encryptedData);
+        const secureData = await encryptData(decryptedData, clientId);
+
+        const newSecret = new Secret({
             clientId,
             secretName,
-            secretData: decryptedData
+            versions: [
+                { version: 1, secretData: secureData }
+            ]
         });
-        await secret.save();
+        await newSecret.save();
 
         res.json({ message: 'Secret stored successfully' });
     } catch (error) {
@@ -39,17 +45,42 @@ exports.keepSecret = async (req, res) => {
 
 exports.getSecret = async (req, res) => {
     const clientId = req.clientId;
-    const secretName = req.body.secretName
+    const { secretName } = req.body
     try {
         const secret = await Secret.findOne({clientId, secretName});
 
-        if (!secret) {
+        if (!secret | secret.versions.length === 0) {
             return res.status(401).json({ error: `Secret(${req.body.secretName}) for ${clientId} not found`});
         }
-        return res.status(200).json({ secretName, secret: secret.secretData });
+        const latestSecret = secret.versions[secret.versions.length - 1];
+        return res.status(200).json({ secretName, secret: latestSecret });
     } catch (error) {
         console.log(error.toString());
         res.status(200).json({error: "Server error"});
+    }
+}
+
+exports.getSecretVersion = async (req, res) => {
+    const clientId = req.clientId;
+    const { secretName, version } = req.body;
+
+    if (!secretName || !version) {
+        res.status(404).json({ error: "No secret found for this version" });
+    }
+
+    try {
+        const secret = await Secret.findOne({ clientId, secretName });
+
+        if (!secret) {
+            return res.status(404).json({ error: "Secret Not found" });
+        }
+        const specificVersion = secret.versions.find(f => v.version === parseInt(version));
+        if (!specificVersion) {
+            return res.status(404).json({ error: "Version not found" });
+        }
+        res.status(200).json({ secret: specificVersion });
+    } catch (error) {
+        res.status(500).json({ error: "Error fetching secret version" });
     }
 }
 
@@ -79,4 +110,34 @@ exports.deleteSecret = async (req, res) => {
         return res.status(500).json({ error: "Server error occurred while deleting secret" });
     }
 };
+
+
+exports.updateSecret = async (req, res) => {
+    const clientId = req.clientId;
+    const { secretName, updatedSecret } = req.body;
+
+    try {
+        const secret = await Secret.findOne({ clientId, secretName });
+        
+        if (!secret) {
+            return res.status(404).json({ error: "Secret Not found" });
+        }
+
+        const newVersion = secret.versions.length + 1;
+
+        secret.versions.push({
+            versions: newVersion,
+            secretData: updatedSecret
+        });
+
+        if (secret.versions.length > MAX_VERSIONS) {
+            secret.versions.shift();
+        }
+
+        await secret.save();
+        return res.status(200).json({ message: `Secret updated to version ${newVersion}` });
+    }catch (error) {
+        res.status(500).json({ error: "error updating secret" });
+    }
+}
 

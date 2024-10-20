@@ -1,9 +1,20 @@
 const mongoose = require('mongoose');
 
-    const secretSchema = new mongoose.Schema({
-        clientId: { type: mongoose.Schema.Types.ObjectId, ref: 'Client' },
-        secretName: String,
-        secretData: String
-    });
+const secretVersionSchema = new mongoose.Schema({
+    version: { type: Number, required: true },
+    secretData: { type: String, required: true },
+    createdAt: { type: Date, default: Date.now }, 
+});
 
-module.exports = mongoose.model('Secret', secretSchema);
+
+
+const secretSchema = new mongoose.Schema({
+    clientId: { type: String, required: true },
+    secretName: { type: String, required: true, unique: true },
+    versions: [secretVersionSchema],
+});
+
+const Secret = mongoose.model('Secret', secretSchema);
+
+module.exports = Secret;
+

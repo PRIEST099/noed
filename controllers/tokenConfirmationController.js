@@ -3,6 +3,7 @@ const Client = require('../models/client');
 const { generateApiToken } = require('../libs/apiToken');
 const { encryptWithPublicKey } = require('../libs/rsaKeys');
 
+
 exports.confirmToken = async (req, res) => {
     const { appId, apiToken, clientPublicKey } = req.body;
 

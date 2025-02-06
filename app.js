@@ -1,11 +1,13 @@
 const express = require('express');
 const apiRoutes = require('./routes/initRoutes');
 const secretRoutes = require('./routes/secretRoutes');
+const morgan = require("morgan");
 
 const app = express();
 
 
 app.use(express.json());
+app.use(morgan("dev"));
 
 // Register the API routes
 app.use('/app', apiRoutes);

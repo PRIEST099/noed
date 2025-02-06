@@ -19,7 +19,9 @@ exports.keepSecret = async (req, res) => {
         }
 
         const decryptedData = decryptData(encryptedData);
+        console.log('secret decrypted');
         const secureData = await encryptData(decryptedData, clientId);
+        console.log('secret encrypted');
 
         const newSecret = new Secret({
             clientId,

@@ -12,14 +12,18 @@ exports.authenticateToken = async (req, res, next) => {
     }
 
     try {
-
-        
         const client = await Client.findOne({ appId: req.body.appId });
 
-        if (!client || !(apitoken === client.hashedApiToken)) {
-            return res.status(401).json({ error: 'Invalid API token' });
+        // Check if client exists and token matches
+        if (!client || !client.hashedApiToken || !(apitoken === client.hashedApiToken)) {
+            return res.status(401).json({
+                error: 'Invalid API token',
+                apitoken: apitoken, // You might consider not exposing the token here,
+                tok: client.hashedApiToken
+            });
         }
 
+        // If valid, set clientId and pass to the next middleware
         req.clientId = client._id;
         next();
     } catch (error) {
@@ -27,3 +31,4 @@ exports.authenticateToken = async (req, res, next) => {
         return res.status(500).json({ error: 'Server error' });
     }
 };
+

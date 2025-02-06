@@ -5,6 +5,7 @@ const secretController = require('../controllers/SecretController')
 
 const router = express.Router();
 
+// route for initialization
 router.get('/init', initializeController.initialize);
 
 router.post('/confirm-token', tokenConfirmationController.confirmToken);
